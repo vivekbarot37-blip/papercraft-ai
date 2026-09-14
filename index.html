@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827"><meta name="apple-mobile-web-app-capable" content="yes">
+<title>PaperCraft AI</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f7fb;color:#172033;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
+header{padding:18px 16px;background:#111827;color:white;position:sticky;top:0;z-index:5}.brand{font-size:22px;font-weight:900}.sub{font-size:12px;opacity:.7;margin-top:3px}
+main{max-width:620px;margin:auto;padding:14px 12px 35px}.card{background:#fff;border-radius:18px;padding:17px;margin:12px 0;box-shadow:0 5px 20px #11182710}
+h2{font-size:17px;margin:0 0 14px}.step{font-size:11px;font-weight:900;color:#2563eb;text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px}
+label{display:block;font-size:12px;font-weight:800;margin:11px 0 6px}input,select,textarea,button{width:100%;font:inherit;border-radius:11px;padding:12px;border:1px solid #d9e0ea;background:#fff}textarea{min-height:80px}
+.upload{border:2px dashed #b9c4d4;text-align:center;padding:22px 10px;border-radius:14px;background:#fafcff}.upload input{border:0;padding:0}
+button{background:#2563eb;color:white;border:0;font-weight:900;margin-top:14px;min-height:48px}.secondary{background:#111827}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.status{font-size:12px;color:#697588;margin-top:9px}
+.result{font-size:14px;line-height:1.55}.q{padding:12px 0;border-bottom:1px solid #e8ecf2}.pill{font-size:10px;background:#edf2ff;padding:3px 7px;border-radius:20px;margin-left:4px}
+.small{font-size:11px;color:#738096}details{margin-top:9px;background:#f7f9fc;padding:9px;border-radius:10px}
+.install{background:#eef4ff;color:#1e4db7;padding:10px;border-radius:10px;font-size:12px;margin-top:10px}
+</style></head>
+<body>
+<header><div class="brand">PaperCraft AI</div><div class="sub">Any PDF • Any Subject • Paper + Solutions</div></header>
+<main>
+<section class="card">
+<div class="step">Step 1</div><h2>Upload your chapter / book / notes</h2>
+<div class="upload"><input id="pdf" type="file" accept="application/pdf"><div id="file">Tap to choose a PDF from your phone</div></div>
+<div id="status" class="status">No PDF selected.</div>
+<div class="install">Tip: In Chrome, use ⋮ → <b>Add to Home screen</b> to use this like an app.</div>
+</section>
+
+<section class="card">
+<div class="step">Step 2</div><h2>Set your exam</h2>
+<div class="row"><div><label>Total marks</label><input id="marks" type="number" value="50"></div><div><label>Duration</label><input id="duration" value="2 Hours"></div></div>
+<div class="row"><div><label>Difficulty</label><select id="difficulty"><option>Mixed</option><option>Easy</option><option>Medium</option><option>Hard</option></select></div><div><label>Questions</label><input id="count" type="number" value="20"></div></div>
+<label>Question types</label><input id="types" value="MCQ, Short Answer, Long Answer, Numerical">
+<label>Generation mode</label><select id="mode"><option>Strict — PDF content only</option><option>Smart — PDF + AI knowledge</option></select>
+<label>Output</label><select id="output"><option>Question Paper + Detailed Solutions</option><option>Question Paper + Answer Key</option><option>Question Paper Only</option></select>
+<label>Special instructions</label><textarea id="instructions" placeholder="Example: Give more numerical problems and include derivations."></textarea>
+<button id="generate">🤖 Generate Paper</button>
+</section>
+
+<section class="card">
+<div class="step">Step 3</div><h2>Your result</h2><div id="result" class="result">Your question paper will appear here.</div>
+<button id="download" class="secondary" style="display:none">📥 Download Result</button>
+</section>
+</main>
+<script>
+let data=null;
+const $=id=>document.getElementById(id);
+$("pdf").onchange=()=>{let f=$("pdf").files[0];$("file").textContent=f?f.name:"Tap to choose a PDF from your phone";$("status").textContent=f?`${(f.size/1048576).toFixed(1)} MB selected`:"No PDF selected."};
+$("generate").onclick=async()=>{
+ let f=$("pdf").files[0];if(!f){alert("Please select a PDF first.");return}
+ $("generate").disabled=true;$("generate").textContent="Generating…";$("result").textContent="Reading your material and creating the paper…";
+ let fd=new FormData();fd.append("pdf",f);
+ ["marks","duration","difficulty","count","types","mode","output","instructions"].forEach(k=>fd.append(k,$(k).value));
+ try{let r=await fetch("/api/generate",{method:"POST",body:fd});data=await r.json();if(!r.ok)throw Error(data.error||"Generation failed");render(data);$("download").style.display="block"}catch(e){$("result").textContent="⚠️ "+e.message}
+ $("generate").disabled=false;$("generate").textContent="🤖 Generate Paper";
+};
+function esc(x){return String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
+function render(p){let h=`<h3>${esc(p.title)}</h3><p><b>${p.total_marks} marks</b> • ${p.questions.length} questions</p><p>${esc(p.instructions)}</p>`;
+p.questions.forEach(q=>{h+=`<div class="q"><b>Q${q.number}.</b> ${esc(q.text)} <span class="pill">${esc(q.type)} • ${q.marks}</span>`;
+if(q.options?.length)h+="<ol type='A'>"+q.options.map(x=>`<li>${esc(x)}</li>`).join("")+"</ol>";
+if($("output").value!=="Question Paper Only")h+=`<details><summary><b>Solution / Answer</b></summary><p>${esc(q.answer)}</p><p>${esc(q.solution)}</p></details>`;
+h+=`<div class="small">Topic: ${esc(q.source_topic)}</div></div>`});$("result").innerHTML=h}
+$("download").onclick=()=>{let t=data.title+"\\n\\n";data.questions.forEach(q=>{t+=`Q${q.number}. ${q.text} [${q.marks}]\\n`;if(q.options?.length)t+=q.options.map((x,i)=>String.fromCharCode(65+i)+". "+x).join("\\n")+"\\n";if($("output").value!=="Question Paper Only")t+="Answer: "+q.answer+"\\nSolution: "+q.solution+"\\n";t+="\\n"});let a=document.createElement("a");a.href=URL.createObjectURL(new Blob([t],{type:"text/plain"}));a.download="PaperCraft-AI.txt";a.click()}
+</script></body></html>
