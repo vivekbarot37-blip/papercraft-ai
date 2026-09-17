@@ -55,6 +55,20 @@ $("generate").onclick=async()=>{
  try{let r=await fetch("/api/generate",{method:"POST",body:fd});data=await r.json();if(!r.ok)throw Error(data.error||"Generation failed");render(data);$("download").style.display="block"}catch(e){$("result").textContent="⚠️ "+e.message}
  $("generate").disabled=false;$("generate").textContent="🤖 Generate Paper";
 };
+ $("#demo").onclick=()=>{
+  data={
+    title:"PaperCraft AI — Demo Test Paper",
+    questions:[
+      {q:"What is a chemical reaction?",marks:2,source_topic:"Demo"},
+      {q:"Explain the difference between acids and bases.",marks:4,source_topic:"Demo"},
+      {q:"Solve: If x + 5 = 12, find x.",marks:3,source_topic:"Demo"},
+      {q:"Write any three properties of light.",marks:6,source_topic:"Demo"},
+      {q:"Explain one important concept with a suitable example.",marks:5,source_topic:"Demo"},
+      {q:"Answer the following application-based question.",marks:10,source_topic:"Demo"}
+    ]
+  };
+  $("#result").innerHTML=render(data);
+};
 function esc(x){return String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
 function render(p){let h=`<h3>${esc(p.title)}</h3><p><b>${p.total_marks} marks</b> • ${p.questions.length} questions</p><p>${esc(p.instructions)}</p>`;
 p.questions.forEach(q=>{h+=`<div class="q"><b>Q${q.number}.</b> ${esc(q.text)} <span class="pill">${esc(q.type)} • ${q.marks}</span>`;
